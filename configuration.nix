@@ -178,40 +178,6 @@ hardware.opengl.driSupport32Bit = true;
 #    package = import ./emacs.nix { inherit pkgs; };
 #  };
 
-
-
-
-
-
-
-
-
-
-
-#   environment.systemPackages = with pkgs; [
-#    alsaLib alsaPlugins alsaUtils
-#    libgphoto2 #to access digital cameras via usb
-#    feh #imageviewer
-#    qbittorrent
-#    blender
-#    viber
-#    tor-browser-bundle-bin
-#    vlc abiword qbittorrent okular
-#    unzip unrar wget vim 
-#    firefox
-#    chromium
-#    opera
-#    audacity
-#    audacious
-#    pavucontrol
-#    vscodium
-#     (import ./emacs.nix { inherit pkgs; }) 
-# ];
-
-
-
-
-
  
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
@@ -238,8 +204,6 @@ hardware.opengl.driSupport32Bit = true;
   };
 
 
-
-
   # services.postgresql.enable = true;
 
 services.postgresql = {
@@ -250,18 +214,10 @@ services.postgresql = {
     enableTCPIP = true;
     authentication = pkgs.lib.mkOverride 11 ''
       local all all trust
-      host all all 127.0.0.1/32 trust
-      host all all ::1/128 trust
     '';
 
-    initialScript = myNixpkgs.writeText "backend-initScript" ''
-      CREATE ROLE nixcloud WITH LOGIN PASSWORD 'nixcloud' CREATEDB;
-      CREATE DATABASE nixcloud;
-      GRANT ALL PRIVILEGES ON DATABASE nixcloud TO nixcloud;
-    '';
+
     };
-
-
 
 
 
