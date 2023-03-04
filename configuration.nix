@@ -5,6 +5,7 @@
 { config, pkgs, ... }:
 
 
+
 let
     myNixpkgs = import (builtins.fetchGit {
         name = "nixos-22.05-git";
@@ -26,6 +27,37 @@ in
 #     ./vscode.nix
 #      <home-manager/nixos> 
     ];
+
+
+
+
+  nix = {
+    package = pkgs.nixFlakes;
+    extraOptions = "experimental-features = nix-command flakes";
+  };
+
+
+#  nix.settings.experimental-features = [ "nix-command" "flakes" ];
+
+#  nix = {
+#   package = pkgs.nixFlakes;
+#     extraOptions = ''
+#       	experimental-features = nix-command flakes
+#	 keep-outputs = true
+#	 keep-derivations = true
+#     '';
+#  };
+
+
+#to keep build-time dependencies around / be able to
+#rebuild while being offline
+# {
+#   nix.extraOptions =  ''
+#     keep-outputs = true
+#     keep-derivations = true
+#   '';
+# }
+
 
   # List packages installed in system profile. To search by name, run:
   # $ nix-env -qaP | grep wget
@@ -57,6 +89,12 @@ in
     # myNixpkgs.pgadmin3
 
     myNixpkgs.docker
+
+    myNixpkgs.docker-compose
+
+    myNixpkgs.direnv
+
+    myNixpkgs.nix-direnv
 
     
 
@@ -96,15 +134,6 @@ in
 
 
 
-#to keep build-time dependencies around / be able to
-#rebuild while being offline
-# {
-#   nix.extraOptions = ''
-#     keep-outputs = true
-#     keep-derivations = true
-#   '';
-# }
-
 
 
 
@@ -124,7 +153,11 @@ in
 
 
   # OpenGL support in 32bit mode
-hardware.opengl.driSupport32Bit = true;
+#hardware.opengl.driSupport32Bit = true;
+
+  hardware.opengl.driSupport32Bit = true;
+  hardware.opengl.extraPackages32 = with myNixpkgs.pkgsi686Linux; [ libva ];
+  hardware.opengl.extraPackages = with myNixpkgs; [ vaapiVdpau libvdpau-va-gl ];
 
   # Redshift display gamma shift daytime/nighttime adjustment
    services.redshift = {
@@ -138,12 +171,18 @@ hardware.opengl.driSupport32Bit = true;
    nix.gc.dates = "weekly";
    nix.gc.options = "--delete-older-than 30d";
 
- 
+   # Enable sound.
+  sound.enable = true;
+  hardware.pulseaudio.enable = true;
+  hardware.pulseaudio.support32Bit = true;
+  #hardware.pulseaudio.extraConfig = "load-module module-echo-cancel";
+  
  # Audio interface setup
-  hardware.pulseaudio = {
-  enable = true;
-  support32Bit = true;
-};
+ # hardware.pulseaudio = {
+ # enable = true;
+ # support32Bit = true;
+ # };
+ 
   # Use the systemd-boot EFI boot loader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
@@ -178,10 +217,53 @@ hardware.opengl.driSupport32Bit = true;
 #    package = import ./emacs.nix { inherit pkgs; };
 #  };
 
+
+
+
+
+
+
+
+
+
+
+#   environment.systemPackages = with pkgs; [
+#    alsaLib alsaPlugins alsaUtils
+#    libgphoto2 #to access digital cameras via usb
+#    feh #imageviewer
+#    qbittorrent
+#    blender
+#    viber
+#    tor-browser-bundle-bin
+#    vlc abiword qbittorrent okular
+#    unzip unrar wget vim 
+#    firefox
+#    chromium
+#    opera
+#    audacity
+#    audacious
+#    pavucontrol
+#    vscodium
+#     (import ./emacs.nix { inherit pkgs; }) 
+# ];
+
+
+
+
+
  
   # Some programs need SUID wrappers, can be configured further or are
   # started in user sessions.
+
+    programs.bash = {
+    interactiveShellInit = ''eval "$(direnv hook bash)"'';
+#    shellAliases = {
+#      withUnstable = "NIX_PATH=nixpkgs=${unstableUrl}";
+#    };
+  };
+  
    programs.bash.enableCompletion = true;
+   
    programs.mtr.enable = true;
    programs.gnupg.agent = { enable = true; enableSSHSupport = true; };
 
@@ -204,6 +286,8 @@ hardware.opengl.driSupport32Bit = true;
   };
 
 
+
+
   # services.postgresql.enable = true;
 
 services.postgresql = {
@@ -214,10 +298,18 @@ services.postgresql = {
     enableTCPIP = true;
     authentication = pkgs.lib.mkOverride 11 ''
       local all all trust
+      host all all 127.0.0.1/32 trust
+      host all all ::1/128 trust
     '';
 
-
+    initialScript = myNixpkgs.writeText "backend-initScript" ''
+      CREATE ROLE nixcloud WITH LOGIN PASSWORD 'nixcloud' CREATEDB;
+      CREATE DATABASE nixcloud;
+      GRANT ALL PRIVILEGES ON DATABASE nixcloud TO nixcloud;
+    '';
     };
+
+
 
 
 
@@ -279,7 +371,7 @@ services.postgresql = {
   # compatible, in order to avoid breaking some software such as database
   # servers. You should change this only after NixOS release notes say you
   # should.
-  system.stateVersion = "22.05"; # Did you read the comment?
+  system.stateVersion = "19.03"; # Did you read the comment?
 
 
 
